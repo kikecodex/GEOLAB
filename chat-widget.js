@@ -1000,7 +1000,7 @@ if (document.readyState === 'loading') {
 function initChatWidget() {
     try {
         const config = {
-            apiUrl: 'http://localhost:8000/api/chat',
+            apiUrl: 'https://geolab-s4gp.onrender.com/api/chat',
             position: 'bottom-right',
             theme: 'modern'
         };
