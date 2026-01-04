@@ -1,0 +1,23 @@
+# Dependencias del Agente IA - GEO CENTER LAB
+
+# OpenAI para el modelo de lenguaje
+openai>=1.30.0
+
+# Web scraping
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+lxml>=4.9.0
+
+# Variables de entorno
+python-dotenv>=1.0.0
+
+# Utilidades adicionales
+colorama>=0.4.6
+
+# Servidor Web
+flask>=3.0.0
+flask-cors>=4.0.0
+gunicorn>=21.2.0  # Necesario para producción (Render)
+
+# Generación de PDF
+reportlab>=4.0.0

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Cotización Completa - GEO CENTER LAB</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3a5f 0%, #4a90e2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #1e3a5f;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .service-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        .service-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+        }
+
+        .service-item input[type="checkbox"] {
+            width: auto;
+        }
+
+        .service-item input[type="number"] {
+            width: 80px;
+        }
+
+        .service-info {
+            flex: 1;
+        }
+
+        .service-name {
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+
+        .service-price {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(37, 211, 102, 0.3);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+        }
+
+        .quote-preview {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .btn-whatsapp {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧪 Generador de Cotizaciones Completas</h1>
+        <p class="subtitle">Genera cotizaciones profesionales con precios e información detallada</p>
+
+        <div class="form-group">
+            <label for="cliente">Nombre del Cliente:</label>
+            <input type="text" id="cliente" placeholder="Ej: Juan Pérez - Constructora ABC" required>
+        </div>
+
+        <div class="form-group">
+            <label>Servicios a Cotizar:</label>
+            <div class="service-list" id="serviceList"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="notas">Notas Adicionales (opcional):</label>
+            <input type="text" id="notas" placeholder="Ej: Proyecto de vivienda, 3 pisos">
+        </div>
+
+        <button class="btn" onclick="generarCotizacion()">
+            📋 Generar Cotización Completa
+        </button>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        // Servicios disponibles con precios
+        const serviciosDisponibles = {
+            "Análisis granulométrico": { precio: 45, unidad: "muestra" },
+            "Límites de Atterberg": { precio: 35, unidad: "muestra" },
+            "Contenido de humedad": { precio: 20, unidad: "muestra" },
+            "CBR (California Bearing Ratio)": { precio: 280, unidad: "ensayo" },
+            "Proctor modificado": { precio: 180, unidad: "ensayo" },
+            "Corte directo": { precio: 350, unidad: "ensayo" },
+            "Resistencia a compresión": { precio: 25, unidad: "cilindro" },
+            "Perforación diamantina": { precio: 180, unidad: "metro lineal" },
+            "Calicatas y test-pits": { precio: 250, unidad: "calicata" },
+            "Ensayos in-situ": { precio: 80, unidad: "punto" },
+            "SPT (Standard Penetration Test)": { precio: 120, unidad: "punto" },
+            "Análisis de calidad de agua": { precio: 150, unidad: "muestra" },
+            "Levantamiento planimétrico y altimétrico": { precio: 1200, unidad: "hectárea" },
+            "Fotogrametría con drones": { precio: 1800, unidad: "proyecto" }
+        };
+
+        // Renderizar lista de servicios
+        function renderServicios() {
+            const list = document.getElementById('serviceList');
+            list.innerHTML = '';
+
+            for (const [nombre, info] of Object.entries(serviciosDisponibles)) {
+                const div = document.createElement('div');
+                div.className = 'service-item';
+                div.innerHTML = `
+                    <input type="checkbox" id="srv_${nombre.replace(/\s+/g, '_')}" value="${nombre}">
+                    <div class="service-info">
+                        <div class="service-name">${nombre}</div>
+                        <div class="service-price">S/. ${info.precio} por ${info.unidad}</div>
+                    </div>
+                    <input type="number" min="1" value="1" class="qty" id="qty_${nombre.replace(/\s+/g, '_')}">
+                `;
+                list.appendChild(div);
+            }
+        }
+
+        async function generarCotizacion() {
+            const cliente = document.getElementById('cliente').value;
+            const notas = document.getElementById('notas').value;
+            const result = document.getElementById('result');
+
+            if (!cliente) {
+                alert('Por favor ingresa el nombre del cliente');
+                return;
+            }
+
+            // Recopilar servicios seleccionados
+            const servicios = [];
+            document.querySelectorAll('#serviceList input[type="checkbox"]:checked').forEach(cb => {
+                const nombre = cb.value;
+                const qtyInput = document.getElementById('qty_' + nombre.replace(/\s+/g, '_'));
+                servicios.push({
+                    nombre: nombre,
+                    cantidad: parseInt(qtyInput.value) || 1
+                });
+            });
+
+            if (servicios.length === 0) {
+                alert('Por favor selecciona al menos un servicio');
+                return;
+            }
+
+            // Enviar a la API
+            try {
+                const response = await fetch('http://localhost:8000/api/whatsapp-quote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nombre: cliente,
+                        servicios: servicios.map(s => s.nombre),
+                        mensaje: notas,
+                        generar_cotizacion: true,
+                        datos_servicios: servicios
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    result.className = 'result success';
+                    result.innerHTML = `
+                        <h3>✅ Cotización Generada!</h3>
+                        <div class="quote-preview">${data.mensaje}</div>
+                        <a href="${data.whatsapp_link}" target="_blank" class="btn-whatsapp">
+                            📱 Abrir en WhatsApp
+                        </a>
+                    `;
+                    result.style.display = 'block';
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Inicializar
+        renderServicios();
+    </script>
+</body>
+
+</html>

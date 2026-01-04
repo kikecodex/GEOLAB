@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotización por WhatsApp - GEO CENTER LAB</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #1e3a5f;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .service-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .service-chip {
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            user-select: none;
+        }
+
+        .service-chip:hover {
+            background: #e8e8e8;
+        }
+
+        .service-chip.selected {
+            background: linear-gradient(135deg, #1e3a5f, #4a90e2);
+            color: white;
+            border-color: #1e3a5f;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(37, 211, 102, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .whatsapp-preview {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .btn-open-whatsapp {
+            margin-top: 15px;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 10px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-open-whatsapp:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(37, 211, 102, 0.3);
+        }
+
+        .emoji {
+            font-size: 24px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>
+            <span class="emoji">💬</span>
+            Solicitar Cotización por WhatsApp
+        </h1>
+        <p class="subtitle">Complete el formulario y le generaremos un enlace directo a WhatsApp</p>
+
+        <form id="quoteForm">
+            <div class="form-group">
+                <label for="nombre">👤 Nombre completo</label>
+                <input type="text" id="nombre" required placeholder="Ej: Juan Pérez">
+            </div>
+
+            <div class="form-group">
+                <label>📋 Servicios de interés (seleccione uno o más)</label>
+                <div class="service-selector">
+                    <div class="service-chip" data-service="Estudio de Mecánica de Suelos">Mecánica de Suelos</div>
+                    <div class="service-chip" data-service="Ensayo de Densidad de Campo">Densidad de Campo</div>
+                    <div class="service-chip" data-service="Ensayo de Refracción Sísmica">Refracción Sísmica</div>
+                    <div class="service-chip" data-service="Estudio Topográfico">Topografía</div>
+                    <div class="service-chip" data-service="Ensayo CBR">CBR</div>
+                    <div class="service-chip" data-service="Perforación Diamantina">Perforación Diamantina</div>
+                    <div class="service-chip" data-service="Análisis de Agua">Análisis de Agua</div>
+                    <div class="service-chip" data-service="Estudio de Batimetría">Batimetría</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="mensaje">💬 Mensaje adicional (opcional)</label>
+                <textarea id="mensaje" placeholder="Describa detalles adicionales sobre su proyecto..."></textarea>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn">
+                <span class="emoji">📲</span>
+                Generar Enlace de WhatsApp
+            </button>
+        </form>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('quoteForm');
+        const serviceChips = document.querySelectorAll('.service-chip');
+        const submitBtn = document.getElementById('submitBtn');
+        const result = document.getElementById('result');
+        const selectedServices = new Set();
+
+        // Manejar selección de servicios
+        serviceChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                const service = chip.dataset.service;
+
+                if (chip.classList.contains('selected')) {
+                    chip.classList.remove('selected');
+                    selectedServices.delete(service);
+                } else {
+                    chip.classList.add('selected');
+                    selectedServices.add(service);
+                }
+            });
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const nombre = document.getElementById('nombre').value;
+            const mensaje = document.getElementById('mensaje').value;
+
+            if (selectedServices.size === 0) {
+                result.className = 'result error';
+                result.innerHTML = '⚠️ Por favor, seleccione al menos un servicio';
+                result.style.display = 'block';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="emoji">⏳</span> Generando...';
+            result.style.display = 'none';
+
+            const data = {
+                nombre: nombre,
+                servicios: Array.from(selectedServices),
+                mensaje: mensaje
+            };
+
+            try {
+                const response = await fetch('http://localhost:8000/api/whatsapp-quote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const responseData = await response.json();
+
+                if (response.ok && responseData.success) {
+                    result.className = 'result success';
+                    result.innerHTML = `
+                        <strong>✅ Enlace generado exitosamente!</strong>
+                        <div class="whatsapp-preview">${responseData.mensaje}</div>
+                        <a href="${responseData.whatsapp_link}" target="_blank" class="btn-open-whatsapp">
+                            <span class="emoji">📱</span>
+                            Abrir WhatsApp ahora
+                        </a>
+                    `;
+                } else {
+                    result.className = 'result error';
+                    result.innerHTML = `
+                        ❌ <strong>Error:</strong> ${responseData.error || 'Error desconocido'}<br>
+                        ${responseData.detalle ? '<small>' + responseData.detalle + '</small>' : ''}
+                    `;
+                }
+                result.style.display = 'block';
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `❌ <strong>Error de conexión:</strong> ${error.message}`;
+                result.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span class="emoji">📲</span> Generar Enlace de WhatsApp';
+            }
+        });
+    </script>
+</body>
+
+</html>
