@@ -445,10 +445,18 @@ SERVICIOS DESTACADOS:
             # Esto permite que se detecten servicios y contactos
             respuesta_real = self._respuesta_demo_mejorada(pregunta)
             
-            # Detectar si la respuesta es genérica/menu para fallback a OpenAI
-            if self._es_respuesta_generica(respuesta_real):
+            # Detectar si debemos usar IA:
+            # 1. Si la respuesta es genérica (menú principal)
+            # 2. O SI la pregunta es compleja (>3 palabras) y tenemos IA disponible, preferir IA
+            usar_ia = self._es_respuesta_generica(respuesta_real)
+            
+            if self.client and len(pregunta.split()) > 3 and not pregunta.strip().isdigit():
+                logger.info("🧠 Pregunta compleja detectada -> Priorizando Gemini AI")
+                usar_ia = True
+
+            if usar_ia:
                 if self.client:
-                    logger.info("🤖 Respuesta genérica detectada, usando Gemini como fallback...")
+                    logger.info("🤖 Usando Gemini (Fallback o Prioridad)...")
                     respuesta_ia = self._consultar_gemini(pregunta)
                     return respuesta_ia
                 else:
