@@ -39,3 +39,4 @@ venv/
 # Project specific
 test_*.py
 check_leads.py
+*.zip

@@ -9,7 +9,7 @@ from agente_ia import AgenteGEOCENTERLAB
 from agente_ia import AgenteGEOCENTERLAB
 import os
 from datetime import datetime
-from database import obtener_leads  # [NUEVO] Importar DB
+from database import obtener_leads, guardar_lead  # [NUEVO] Importar DB
 
 app = Flask(__name__)
 CORS(app)  # Permitir solicitudes desde cualquier origen
@@ -464,6 +464,56 @@ def health():
         'version': '1.0.0',
         'timestamp': datetime.now().isoformat()
     })
+
+
+@app.route('/api/leads', methods=['POST'])
+def registrar_lead():
+    """
+    Endpoint para registrar un nuevo lead desde el formulario web
+    
+    Body JSON:
+    {
+        "nombre": "Juan Perez",
+        "telefono": "999888777",
+        "email": "juan@example.com",
+        "servicio": "laboratorio",
+        "mensaje": "Hola..."
+    }
+    """
+    try:
+        data = request.json
+        
+        nombre = data.get('nombre', 'Anónimo')
+        telefono = data.get('telefono', '')
+        email = data.get('email', '')
+        servicio = data.get('servicio', 'General')
+        mensaje = data.get('mensaje', '')
+        
+        # Combinar contacto si ambos existen
+        contacto = telefono
+        if email:
+            contacto += f" / {email}"
+            
+        # Combinar interés con mensaje para contexto
+        interes = f"{servicio} - {mensaje}"
+        
+        # Guardar en BD
+        lead_id = guardar_lead(
+            contacto=contacto,
+            nombre=nombre,
+            servicios=interes,
+            tipo="web_form"
+        )
+        
+        return jsonify({
+            'status': 'ok',
+            'mensaje': 'Lead registrado exitosamente',
+            'lead_id': lead_id
+        })
+        
+    except Exception as e:
+        print(f"❌ Error al registrar lead: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/leads', methods=['GET'])

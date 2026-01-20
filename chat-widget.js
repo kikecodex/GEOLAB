@@ -5,7 +5,7 @@
 
 class ChatWidgetIA {
     constructor(config = {}) {
-        this.apiUrl = config.apiUrl || 'http://localhost:8000/api/chat';
+        this.apiUrl = config.apiUrl || 'https://geocenter.onrender.com/api/chat';
         this.position = config.position || 'bottom-right';
         this.theme = config.theme || 'modern';
         this.isOpen = false;
@@ -37,9 +37,9 @@ class ChatWidgetIA {
                     <div class="chat-header-ia">
                         <div class="chat-header-info">
                             <div class="chat-avatar">
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-                                </svg>
+                            <div class="chat-avatar">
+                                <img src="imagenes/logo_aldo_profesional.png" alt="Asistente" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            </div>
                             </div>
                             <div>
                                 <h3>Asistente IA</h3>
@@ -59,37 +59,22 @@ class ChatWidgetIA {
                     <div class="chat-content-wrapper">
                         <div id="chat-messages-ia" class="chat-messages-ia">
                             <div class="chat-message bot-message">
-                                <div class="message-avatar">🤖</div>
+                                <div class="message-avatar">
+                                    <img src="imagenes/logo_aldo_profesional.png" alt="IA" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                </div>
                                 <div class="message-content">
-                                    <p>¡Hola! 👋 ¿En qué te puedo ayudar? <strong>¡Conversemos!</strong></p>
-                                    <p>Soy tu asistente de <strong>GEO CENTER LAB</strong> y puedo ayudarte con:</p>
-                                    <ul>
-                                        <li>✅ Servicios de laboratorio</li>
-                                        <li>✅ Estudios topográficos</li>
-                                        <li>✅ Proyectos realizados</li>
-                                        <li>✅ Horarios y contacto</li>
-                                    </ul>
-                                    <p>Escribe tu consulta o elige una opción 👇</p>
+                                    <p>¡Hola! 👋 Soy tu asistente de <strong>GEO CENTER LAB</strong>.</p>
+
+
                                 </div>
                             </div>
                             
-                            <div class="chat-suggestions-ia" id="chat-suggestions">
-                                <button class="suggestion-btn" data-text="¿Qué servicios ofrecen?">
-                                    📋 Servicios
-                                </button>
-                                <button class="suggestion-btn" data-text="¿Cuál es su horario?">
-                                    🕐 Horarios
-                                </button>
-                                <button class="suggestion-btn" data-text="¿Dónde están ubicados?">
-                                    📍 Ubicación
-                                </button>
-                                <button class="suggestion-btn" data-text="¿Realizan topografía?">
-                                    📐 Topografía
-                                </button>
-                            </div>
+
                             
                             <div id="typing-indicator" class="typing-indicator" style="display: none;">
-                                <div class="message-avatar">🤖</div>
+                                <div class="message-avatar">
+                                    <img src="imagenes/logo_aldo_profesional.png" alt="IA" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                </div>
                                 <div class="typing-dots">
                                     <span></span><span></span><span></span>
                                 </div>
@@ -144,12 +129,7 @@ class ChatWidgetIA {
             sendBtn.disabled = !input.value.trim();
         });
 
-        suggestions.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const text = btn.getAttribute('data-text');
-                this.sendPredefinedMessage(text);
-            });
-        });
+
     }
 
     addStyles() {
@@ -271,11 +251,12 @@ class ChatWidgetIA {
                 .chat-header-ia {
                     background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
                     color: var(--white);
-                    padding: 18px 20px;
+                    padding: 8px 12px;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                     flex-shrink: 0;
+                    height: 50px;
                 }
                 
                 .chat-header-info {
@@ -285,8 +266,8 @@ class ChatWidgetIA {
                 }
                 
                 .chat-avatar {
-                    width: 40px;
-                    height: 40px;
+                    width: 32px;
+                    height: 32px;
                     background: rgba(255, 255, 255, 0.15);
                     border-radius: 50%;
                     display: flex;
@@ -296,22 +277,22 @@ class ChatWidgetIA {
                 
                 .chat-header-ia h3 {
                     margin: 0;
-                    font-size: 17px;
+                    font-size: 15px;
                     font-weight: 600;
                 }
                 
                 .chat-status {
-                    margin: 3px 0 0 0;
-                    font-size: 12px;
+                    margin: 2px 0 0 0;
+                    font-size: 11px;
                     opacity: 0.9;
                     display: flex;
                     align-items: center;
-                    gap: 6px;
+                    gap: 4px;
                 }
                 
                 .status-dot {
-                    width: 8px;
-                    height: 8px;
+                    width: 6px;
+                    height: 6px;
                     background: var(--success-color);
                     border-radius: 50%;
                     animation: blink 2s infinite;
@@ -567,16 +548,17 @@ class ChatWidgetIA {
                 }
                 
                 .chat-footer-ia {
-                    padding: 8px 10px;
+                    padding: 4px 8px;
                     text-align: center;
                     background: rgba(248, 249, 250, 0.7);
                     border-top: 1px solid var(--border-color);
                     flex-shrink: 0;
+                    font-size: 9px;
                 }
                 
                 .chat-footer-ia small {
                     color: var(--text-secondary);
-                    font-size: 11px;
+                    font-size: 10px;
                 }
                 
                 @media (max-width: 480px) {
@@ -814,18 +796,25 @@ class ChatWidgetIA {
         const typingIndicator = document.getElementById('typing-indicator');
 
         // Siempre mantener sugerencias al final del scroll
-        const suggestions = document.getElementById('chat-suggestions');
-        if (suggestions) {
-            suggestions.remove();
-            messagesContainer.insertBefore(suggestions, typingIndicator);
-        }
+
 
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message ${type}-message`;
 
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
-        avatar.textContent = type === 'user' ? '👤' : '🤖';
+        if (type === 'user') {
+            avatar.textContent = '👤';
+        } else {
+            const img = document.createElement('img');
+            img.src = 'imagenes/logo_aldo_profesional.png';
+            img.alt = 'IA';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '50%';
+            avatar.appendChild(img);
+        }
 
         const content = document.createElement('div');
         content.className = 'message-content';

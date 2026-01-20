@@ -2,7 +2,7 @@ import os
 import json
 import requests
 from bs4 import BeautifulSoup
-from openai import OpenAI
+import google.generativeai as genai
 from dotenv import load_dotenv
 from datetime import datetime
 import re
@@ -131,20 +131,54 @@ PROYECTOS_REALES = [
     {'nombre': 'Planta de Tratamiento de Aguas', 'descripcion': 'Ensayos de permeabilidad y estabilidad de taludes', 'imagen': ''}
 ]
 
+
+# Definición de Flujos de Consulta Experta
+FLUJOS_SERVICIO = {
+    'ems': {
+        'nombre': 'Estudio de Mecánica de Suelos',
+        'slots': [
+            {'id': 'tipo_proyecto', 'pregunta': 'Para calibrar el estudio, ¿qué tipo de proyecto es? (Ej: Vivienda, Edificio, Carretera)'},
+            {'id': 'pisos', 'pregunta': '¿Cuántos niveles o pisos tendrá la edificación? (Incluyendo sótanos)'},
+            {'id': 'area', 'pregunta': '¿Cuál es el área aproximada del terreno en m²?'},
+            {'id': 'ubicacion', 'pregunta': '¿En qué distrito u localidad se ubica el proyecto? (Para logística)'}
+        ]
+    },
+    'concreto': {
+        'nombre': 'Ensayo de Concreto',
+        'slots': [
+            {'id': 'tipo_muestra', 'pregunta': '¿Qué tipo de muestras necesitas ensayar? (Ej: Probetas, Vigas, Testigos)'},
+            {'id': 'cantidad', 'pregunta': '¿Cuántas muestras tienes en total?'},
+            {'id': 'edad', 'pregunta': '¿A qué edad se deben romper? (Ej: 7, 14, 28 días)'},
+            {'id': 'servicio', 'pregunta': '¿Deseas que recojamos las muestras en obra o las traes al laboratorio?'}
+        ]
+    },
+    'topografia': {
+        'nombre': 'Servicio de Topografía',
+        'slots': [
+            {'id': 'terreno', 'pregunta': '¿Cómo es el terreno? (Plano, Ladera, Accidentado)'},
+            {'id': 'area', 'pregunta': '¿De qué extensión estamos hablando? (m² o Hectáreas)'},
+            {'id': 'entregables', 'pregunta': '¿Qué entregables necesitas? (Ej: Solo planos, Curvas de nivel, Vuelo con Drone)'}
+        ]
+    }
+}
+
 class AgenteGEOCENTERLAB:
     def __init__(self, respuesta_extendida=False, url_personalizada=None):
         """Inicializa el agente con soporte para URL personalizada"""
-        self.api_key = os.getenv("OPENAI_API_KEY")
+        self.api_key = os.getenv("GEMINI_API_KEY")
         # FORZAR modo demo para usar el flujo conversacional mejorado
         self.modo_demo = True  # Usar siempre el flujo real optimizado
 
         if self.api_key:
-            self.client = OpenAI(api_key=self.api_key)
-            logger.info("🤖 Modo híbrido: Flujo real + OpenAI disponible")
+            genai.configure(api_key=self.api_key)
+            # Usar gemini-1.5-flash que es rápido y eficiente para esto
+            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            self.chat_session = None # Para mantener sesión si fuera necesario
+            logger.info("🤖 Modo híbrido: Flujo real + Gemini AI disponible")
         else:
-            self.client = None
-            logger.warning("⚠️ MODO DEMO: No se encontró API Key de OpenAI")
-            logger.warning("   El fallback a OpenAI NO funcionará. Solo menú real disponible.")
+            self.model = None
+            logger.warning("⚠️ MODO DEMO: No se encontró GEMINI_API_KEY")
+            logger.warning("   El fallback a IA NO funcionará. Solo menú real disponible.")
         
         # Datos con fallback a valores reales
         self.datos_empresa = {}
@@ -158,6 +192,14 @@ class AgenteGEOCENTERLAB:
         self.ultima_opcion = None
         self.interacciones_count = 0
         self.solicito_contacto = False
+        
+        # [NUEVO] Estado del Motor de Consulta
+        self.flujo_consulta = {
+            'activo': False,
+            'tipo': None, # 'ems', 'concreto', etc.
+            'datos': {},  # {'pisos': 5, 'area': 200..}
+            'step': 0     # Índice de pregunta actual
+        }
         
         # URL para scraping
         self.url_pagina = url_personalizada or os.getenv("URL_PAGINA", "http://localhost:8000/cipda.html")
@@ -404,9 +446,9 @@ SERVICIOS DESTACADOS:
             
             # Detectar si la respuesta es genérica/menu para fallback a OpenAI
             if self._es_respuesta_generica(respuesta_real):
-                if self.client:
-                    logger.info("🤖 Respuesta genérica detectada, usando OpenAI como fallback...")
-                    respuesta_ia = self._consultar_openai(pregunta)
+                if self.model:
+                    logger.info("🤖 Respuesta genérica detectada, usando Gemini como fallback...")
+                    respuesta_ia = self._consultar_gemini(pregunta)
                     return respuesta_ia
                 else:
                     logger.warning("❌ No hay API Key, solo menú real disponible.")
@@ -414,64 +456,9 @@ SERVICIOS DESTACADOS:
             else:
                 return respuesta_real
 
-        # Modo IA directo (OpenAI)
+        # Modo IA directo (Gemini)
         try:
-            contexto = self._construir_contexto_inteligente()
-            intencion = self._detectar_intencion(pregunta)
-            if intencion in ['cotizacion', 'contacto']:
-                temperatura = 0.3
-                max_tokens = 250
-            elif intencion == 'informacion_general':
-                temperatura = 0.5
-                max_tokens = 300
-            else:
-                temperatura = 0.4
-                max_tokens = 280
-
-            mensajes = [
-                {
-                    "role": "system",
-                    "content": f"""Eres el asistente virtual senior de GEO CENTER LAB. Tu objetivo es convertir visitantes en clientes.
-Mantén conversaciones naturales, breves y orientadas a la acción.
-
-{contexto}
-
-REGLAS DE ORO:
-- 2-3 frases máximo por respuesta
-- Usa opciones numeradas para guiar
-- Siempre pregunta algo al final para mantener conversación
-- Para cotizaciones: "Necesito [dato] para personalizar tu presupuesto"
-- Usa emojis estratégicamente (1-2 por mensaje)
-- Si detectan email/teléfono: CONFIRMAR y dar siguiente paso INMEDIATO
-- Precios: NUNCA dar cifras exactas sin contexto, usar "desde" o "coti personalizada"
-- Ofrecer valor: "Te envío lista completa si me das email"
-
-FLUJO REAL:
-P: "¿Qué servicios tienen?"
-R: "Somos especialistas en 3 áreas:
-1. 🔬 Laboratorio de suelos, agua
-2. 📐 Elaboracion de informes geotecnicos
-3. ⚙️ Perforación Diamantina
-4. Refraccion sismica
-
-¿Cuál te interesa para tu proyecto? (Escribe 1-4)"""
-                }
-            ]
-            mensajes.extend(self.historial_conversacion[-10:])
-            mensajes.append({
-                "role": "user",
-                "content": pregunta
-            })
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=mensajes,
-                temperature=temperatura,
-                max_tokens=max_tokens
-            )
-            respuesta = response.choices[0].message.content
-            self._actualizar_historial(pregunta, respuesta)
-            logger.info("✅ Respuesta generada exitosamente")
-            return respuesta
+            return self._consultar_gemini(pregunta)
         except Exception as e:
             logger.error(f"❌ Error en consulta: {e}")
             return f"⚠️ Hubo un problema. Llámanos directamente: {self.datos_empresa.get('telefono', ['932203111'])[0]} 📞"
@@ -530,33 +517,61 @@ R: "Somos especialistas en 3 áreas:
                 return True
         return False
 
-    def _consultar_openai(self, pregunta):
-        """Consulta a OpenAI directamente como fallback"""
+    def _consultar_gemini(self, pregunta):
+        """Consulta a Gemini AI como fallback con contexto"""
         try:
             contexto = self._construir_contexto_inteligente()
-            mensajes = [
-                {
-                    "role": "system",
-                    "content": f"""Eres el asistente virtual senior de GEO CENTER LAB. Tu objetivo es convertir visitantes en clientes. Sé natural, breve y útil. {contexto}"""
-                },
-                {
-                    "role": "user",
-                    "content": pregunta
-                }
-            ]
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=mensajes,
-                temperature=0.5,
-                max_tokens=300
-            )
-            respuesta = response.choices[0].message.content
+            
+            # Prompt de Sistema (Instrucciones)
+            instrucciones = f"""Eres el asistente virtual senior de GEO CENTER LAB. Tu objetivo es convertir visitantes en clientes.
+Mantén conversaciones naturales, breves y orientadas a la acción.
+
+CONTEXTO EMPRESA:
+{contexto}
+
+REGLAS DE ORO:
+- 2-3 frases máximo por respuesta
+- Usa opciones numeradas para guiar
+- Siempre pregunta algo al final para mantener conversación
+- Para cotizaciones: "Necesito [dato] para personalizar tu presupuesto"
+- Usa emojis estratégicamente (1-2 por mensaje)
+- Precios: NUNCA dar cifras exactas sin contexto, usar "desde" o "cotización personalizada"
+
+Ejemplo de interacción ideal:
+U: "¿Qué servicios tienen?"
+A: "Somos especialistas en:
+1. 🔬 Laboratorio de suelos y concreto
+2. 📐 Topografía y Geodesia
+3. ⚙️ Perforación Diamantina
+
+¿Cuál es para tu proyecto? (Escribe el número)"
+"""
+            
+            # Construir chat completo en texto plano para Gemini (forma más robusta stateless)
+            chat_history = [instrucciones]
+            
+            # Añadir historial reciente (últimos 8 mensajes)
+            for msg in self.historial_conversacion[-8:]:
+                rol = "Usuario" if msg['role'] == 'user' else "Asistente"
+                chat_history.append(f"{rol}: {msg['content']}")
+            
+            # Añadir mensaje actual
+            chat_history.append(f"Usuario: {pregunta}")
+            chat_history.append("Asistente: ")
+            
+            prompt_final = "\n\n".join(chat_history)
+            
+            # Generar contenido
+            response = self.model.generate_content(prompt_final)
+            respuesta = response.text
+            
             self._actualizar_historial(pregunta, respuesta)
-            logger.info("✅ Respuesta OpenAI fallback generada exitosamente")
+            logger.info("✅ Respuesta Gemini generada exitosamente")
             return respuesta
+            
         except Exception as e:
-            logger.error(f"❌ Error en fallback OpenAI: {e}")
-            return f"⚠️ Hubo un problema con la IA. Llámanos directamente: {self.datos_empresa.get('telefono', ['932203111'])[0]} 📞"
+            logger.error(f"❌ Error en consulta Gemini: {e}")
+            return f"⚠️ Disculpa, tuve un lapso técnico. ¿Podrías llamarnos directamente? {self.datos_empresa.get('telefono', ['932203111'])[0]} 📞"
     
     def _detectar_intencion(self, pregunta):
         """Detecta la intención del usuario para personalizar respuesta"""
@@ -704,12 +719,110 @@ R: "Somos especialistas en 3 áreas:
         
         return servicios_detectados
     
+    
+    def _detectar_tipo_flujo(self, texto):
+        """Detecta si la consulta corresponde a uno de los flujos expertos"""
+        texto = texto.lower()
+        if any(x in texto for x in ['suelo', 'ems', 'calicata', 'cbr', 'proctor']):
+            return 'ems'
+        if any(x in texto for x in ['concreto', 'probbeta', 'testigo', 'rotura', 'compresion']):
+            return 'concreto'
+        if any(x in texto for x in ['topografia', 'levantamiento', 'curvas', 'drone', 'plano']):
+            return 'topografia'
+        return None
+
+    def _iniciar_flujo_consulta(self, tipo_servicio):
+        """Inicializa un nuevo flujo de consulta"""
+        if tipo_servicio not in FLUJOS_SERVICIO:
+            return False
+            
+        logger.info(f"🚀 Iniciando flujo de consulta experto: {tipo_servicio}")
+        self.flujo_consulta = {
+            'activo': True,
+            'tipo': tipo_servicio,
+            'datos': {},
+            'step': 0
+        }
+        
+        # Retornar la primera pregunta
+        primera_pregunta = FLUJOS_SERVICIO[tipo_servicio]['slots'][0]['pregunta']
+        return f"👋 Claro que sí. Soy el especialista encargado del área de {FLUJOS_SERVICIO[tipo_servicio]['nombre']}.\n\nPara poder darte una cotización exacta y técnica, necesito hacerte un par de preguntas rápidas.\n\n{primera_pregunta}"
+
+    def _gestionar_flujo_consulta(self, mensaje_usuario):
+        """Gestiona el avance del flujo de preguntas"""
+        flujo = self.flujo_consulta
+        tipo = flujo['tipo']
+        paso_actual = flujo['step']
+        slots = FLUJOS_SERVICIO[tipo]['slots']
+        
+        # 1. Guardar respuesta del paso anterior (si no es el inicio)
+        # Nota: Aquí podríamos usar IA para extraer el dato exacto, pero por ahora guardamos todo el texto
+        slot_actual = slots[paso_actual]
+        flujo['datos'][slot_actual['id']] = mensaje_usuario
+        logger.info(f"✅ Dato guardado [{slot_actual['id']}]: {mensaje_usuario}")
+        
+        # 2. Avanzar al siguiente paso
+        flujo['step'] += 1
+        
+        # 3. Verificar si quedan preguntas
+        if flujo['step'] < len(slots):
+            siguiente_pregunta = slots[flujo['step']]['pregunta']
+            return f"Entendido. 👍\n\n{siguiente_pregunta}"
+        else:
+            # 4. Flujo completado -> Generar Cotización
+            return self._finalizar_flujo_consulta()
+
+    def _finalizar_flujo_consulta(self):
+        """Genera el cierre y el enlace de cotización"""
+        flujo = self.flujo_consulta
+        tipo = flujo['tipo']
+        datos = flujo['datos']
+        nombre_servicio = FLUJOS_SERVICIO[tipo]['nombre']
+        
+        # Construir resumen para el mensaje de WhatsApp
+        resumen = f"*COTIZACIÓN - {nombre_servicio.upper()}*\n"
+        resumen_texto = f"Perfecto, tengo toda la información técnica para tu {nombre_servicio}. 👷‍♂️\n\nHe preparado un resumen:\n"
+        
+        for slot in FLUJOS_SERVICIO[tipo]['slots']:
+            key = slot['id']
+            val = datos.get(key, 'No especificado')
+            resumen += f"- *{key.capitalize()}*: {val}\n"
+            resumen_texto += f"✅ **{key.capitalize()}**: {val}\n"
+            
+        # Limpiar estado
+        self.flujo_consulta['activo'] = False
+        
+        # Generar Link
+        whatsapp = self.datos_empresa['redes_sociales']['whatsapp']
+        mensaje_encoded = requests.utils.quote(f"Hola GEO CENTER, acabo de hablar con el asistente IA.\n\n{resumen}\nQuisiera saber el costo final.")
+        link = f"https://wa.me/{whatsapp}?text={mensaje_encoded}"
+        
+        return f"""{resumen_texto}
+Hemos analizado tus requerimientos. Según normas técnicas, tu proyecto requiere un enfoque específico.
+
+👉 **Mira tu cotización premilinar aquí:**
+[Solicitar Precio Final en WhatsApp]({link})
+
+¿Te gustaría que te llame un ingeniero especialista ahora mismo?"""
+
     def _respuesta_demo_mejorada(self, pregunta):
         """Modo demo con lógica conversacional avanzada"""
         pregunta_lower = pregunta.lower()
         pregunta_stripped = pregunta.strip()
         
-        # PRIMERO: Detectar servicios mencionados y guardarlos en contexto
+        # [NUEVO] 0. Verificar si hay un flujo de consulta experto activo
+        if self.flujo_consulta['activo']:
+            return self._gestionar_flujo_consulta(pregunta)
+            
+        # [NUEVO] 1. Detectar si inicia un flujo experto (Intención de Cotización + Servicio Específico)
+        tipo_flujo = self._detectar_tipo_flujo(pregunta_lower)
+        # Si detecta servicio Y (pide cotización O menciona palabras clave fuertes)
+        es_cotizacion = any(x in pregunta_lower for x in ['cotiz', 'costo', 'precio', 'cuanto', 'quiero', 'necesito'])
+        
+        if tipo_flujo and es_cotizacion:
+            return self._iniciar_flujo_consulta(tipo_flujo)
+
+        # 2. Detectar servicios mencionados (Lógica anterior)
         servicios_mencionados = self._detectar_servicios_mencionados(pregunta)
         if servicios_mencionados:
             # Si menciona "ahora" + servicio, resetea contexto anterior
