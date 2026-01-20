@@ -171,8 +171,8 @@ class AgenteGEOCENTERLAB:
 
         if self.api_key:
             genai.configure(api_key=self.api_key)
-            # Usar gemini-1.5-flash que es rápido y eficiente para esto
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            # Usar gemini-1.5-flash-latest que es rápido y eficiente para esto
+            self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
             self.chat_session = None # Para mantener sesión si fuera necesario
             logger.info("🤖 Modo híbrido: Flujo real + Gemini AI disponible")
         else:
