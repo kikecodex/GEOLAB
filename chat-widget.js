@@ -989,7 +989,7 @@ if (document.readyState === 'loading') {
 function initChatWidget() {
     try {
         const config = {
-            apiUrl: 'https://geolab-s4gp.onrender.com/api/chat',
+            apiUrl: 'https://geocenter.onrender.com/api/chat',
             position: 'bottom-right',
             theme: 'modern'
         };
