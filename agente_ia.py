@@ -437,6 +437,11 @@ SERVICIOS DESTACADOS:
         logger.info(f"\uD83D\uDCAC Consulta #{self.interacciones_count + 1}: {pregunta[:50]}...")
         self.interacciones_count += 1
 
+        # [NUEVO] Lógica prioritaria: Si hay IA y es una consulta compleja, usar Gemini directo
+        if self.client and len(pregunta.split()) > 1 and not pregunta.strip().isdigit():
+            logger.info("🧠 Prioridad Gemini activada (bypass menu)")
+            return self._consultar_gemini(pregunta)
+
         # Si está en modo demo, usar el flujo real (menú)
         if self.modo_demo:
             pregunta_lower = pregunta.lower()
@@ -447,12 +452,9 @@ SERVICIOS DESTACADOS:
             
             # Detectar si debemos usar IA:
             # 1. Si la respuesta es genérica (menú principal)
-            # 2. O SI la pregunta es compleja (>1 palabra) y tenemos IA disponible, preferir IA
             usar_ia = self._es_respuesta_generica(respuesta_real)
             
-            if self.client and len(pregunta.split()) > 1 and not pregunta.strip().isdigit():
-                logger.info("🧠 Pregunta compleja detectada -> Priorizando Gemini AI")
-                usar_ia = True
+            # El chequeo complejo ya se hizo arriba, aquí queda como fallback para otros casos
 
             if usar_ia:
                 if self.client:
