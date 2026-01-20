@@ -223,21 +223,25 @@ class ChatWidgetIA {
                 
                 .chat-container-ia {
                     position: fixed;
-                    bottom: 100px;
-                    right: 20px;
-                    width: 420px;
-                    max-width: calc(100vw - 40px);
-                    height: 650px;
-                    max-height: calc(100vh - 140px);
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    width: 100vw;
+                    max-width: 100%;
+                    height: 100vh;
+                    height: 100dvh; /* Para móviles */
+                    max-height: 100%;
                     background: var(--white);
-                    border-radius: 20px;
-                    box-shadow: var(--shadow);
+                    border-radius: 0;
+                    box-shadow: none;
                     display: flex;
                     flex-direction: column;
-                    backdrop-filter: blur(20px);
-                    -webkit-backdrop-filter: blur(20px);
-                    border: 1px solid rgba(255, 255, 255, 0.5);
+                    backdrop-filter: none;
+                    -webkit-backdrop-filter: none;
+                    border: none;
                     overflow: hidden;
+                    z-index: 10000; /* Encima de todo */
                     transform: translateY(20px);
                     opacity: 0;
                     transition: var(--transition);
