@@ -622,7 +622,7 @@ class ChatWidgetIA {
                 @keyframes slideInMessage {
                     from {
                         opacity: 0;
-                        transform: translateY(20px) scale(0.95);
+                        transform: translateY(-10px);
                     }
                     to {
                         opacity: 1;
@@ -887,10 +887,8 @@ class ChatWidgetIA {
         setTimeout(() => {
             if (!this.isOpen) {
                 this.toggleChat();
-                // Añadir un mensaje inicial atractivo
-                setTimeout(() => {
-                    this.addMessage('👋 ¡Hola! Bienvenido a GEO CENTER LAB. ¿En qué puedo ayudarte hoy?', 'bot');
-                }, 500);
+                // Añadir un mensaje inicial atractivo (ELIMINADO para evitar duplicados)
+                // this.addMessage('👋 ¡Hola! Bienvenido a GEO CENTER LAB. ¿En qué puedo ayudarte hoy?', 'bot');
             }
         }, 60000); // 1 minuto
 
