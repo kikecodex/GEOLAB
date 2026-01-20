@@ -2,7 +2,7 @@
 
 # OpenAI para el modelo de lenguaje (DEPRECADO - Moviendo a Gemini)
 openai>=1.30.0
-google-generativeai>=0.3.0
+google-genai>=1.0.0
 
 # Web scraping
 beautifulsoup4>=4.12.0

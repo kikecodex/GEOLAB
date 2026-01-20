@@ -2,7 +2,7 @@ import os
 import json
 import requests
 from bs4 import BeautifulSoup
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 from datetime import datetime
 import re
@@ -170,13 +170,14 @@ class AgenteGEOCENTERLAB:
         self.modo_demo = True  # Usar siempre el flujo real optimizado
 
         if self.api_key:
-            genai.configure(api_key=self.api_key)
-            # Usar gemini-2.0-flash - modelo actual de Google (2024/2025)
-            self.model = genai.GenerativeModel('gemini-2.0-flash')
+            # Nuevo SDK google-genai (2025)
+            self.client = genai.Client(api_key=self.api_key)
+            self.model_name = 'gemini-2.0-flash'
             self.chat_session = None # Para mantener sesión si fuera necesario
             logger.info("🤖 Modo híbrido: Flujo real + Gemini AI disponible")
         else:
-            self.model = None
+            self.client = None
+            self.model_name = None
             logger.warning("⚠️ MODO DEMO: No se encontró GEMINI_API_KEY")
             logger.warning("   El fallback a IA NO funcionará. Solo menú real disponible.")
         
@@ -446,7 +447,7 @@ SERVICIOS DESTACADOS:
             
             # Detectar si la respuesta es genérica/menu para fallback a OpenAI
             if self._es_respuesta_generica(respuesta_real):
-                if self.model:
+                if self.client:
                     logger.info("🤖 Respuesta genérica detectada, usando Gemini como fallback...")
                     respuesta_ia = self._consultar_gemini(pregunta)
                     return respuesta_ia
@@ -561,8 +562,11 @@ A: "Somos especialistas en:
             
             prompt_final = "\n\n".join(chat_history)
             
-            # Generar contenido
-            response = self.model.generate_content(prompt_final)
+            # Generar contenido con nuevo SDK
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt_final
+            )
             respuesta = response.text
             
             self._actualizar_historial(pregunta, respuesta)
