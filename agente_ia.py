@@ -447,10 +447,10 @@ SERVICIOS DESTACADOS:
             
             # Detectar si debemos usar IA:
             # 1. Si la respuesta es genérica (menú principal)
-            # 2. O SI la pregunta es compleja (>3 palabras) y tenemos IA disponible, preferir IA
+            # 2. O SI la pregunta es compleja (>1 palabra) y tenemos IA disponible, preferir IA
             usar_ia = self._es_respuesta_generica(respuesta_real)
             
-            if self.client and len(pregunta.split()) > 3 and not pregunta.strip().isdigit():
+            if self.client and len(pregunta.split()) > 1 and not pregunta.strip().isdigit():
                 logger.info("🧠 Pregunta compleja detectada -> Priorizando Gemini AI")
                 usar_ia = True
 
@@ -486,6 +486,7 @@ SERVICIOS DESTACADOS:
         
         patrones_genericos = [
             "¿En qué te puedo ayudar?",
+            "1. 🔬 Ver servicios de laboratorio",
             "Escribe el número",
             "Opción no válida",
             "opción no válida",
